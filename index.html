@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Attendance System</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Segoe UI, sans-serif;
+}
+
+body{
+background:linear-gradient(135deg,#667eea,#764ba2);
+min-height:100vh;
+display:flex;
+justify-content:center;
+align-items:center;
+padding:20px;
+color:white;
+}
+
+.container{
+background:rgba(255,255,255,0.1);
+backdrop-filter:blur(10px);
+padding:30px;
+border-radius:20px;
+max-width:500px;
+width:100%;
+text-align:center;
+}
+
+button{
+padding:12px 25px;
+border:none;
+border-radius:8px;
+font-size:16px;
+cursor:pointer;
+margin-top:10px;
+}
+
+.start{
+background:white;
+color:black;
+}
+
+#webcam-container{
+margin-top:20px;
+}
+
+canvas{
+border-radius:10px;
+}
+
+.status{
+margin-top:15px;
+font-size:18px;
+font-weight:bold;
+}
+
+.history{
+margin-top:20px;
+background:rgba(255,255,255,0.15);
+padding:10px;
+border-radius:10px;
+max-height:200px;
+overflow-y:auto;
+}
+
+.history div{
+padding:5px;
+border-bottom:1px solid rgba(255,255,255,0.2);
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<h2>AI Face Attendance</h2>
+
+<button class="start" onclick="init()">Start Camera</button>
+
+<div id="webcam-container"></div>
+
+<div class="status" id="status">Waiting for recognition...</div>
+
+<div class="history" id="history"></div>
+
+</div>
+
+<script>
+
+const URL="./my_model/";
+
+let model,webcam,maxPredictions;
+
+async function init(){
+
+const modelURL=URL+"model.json";
+const metadataURL=URL+"metadata.json";
+
+model=await tmImage.load(modelURL,metadataURL);
+maxPredictions=model.getTotalClasses();
+
+webcam=new tmImage.Webcam(250,250,true);
+
+await webcam.setup();
+await webcam.play();
+
+window.requestAnimationFrame(loop);
+
+document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+loadHistory();
+
+}
+
+async function loop(){
+
+webcam.update();
+await predict();
+window.requestAnimationFrame(loop);
+
+}
+
+async function predict(){
+
+const prediction=await model.predict(webcam.canvas);
+
+let bestPrediction=prediction.reduce((max,p)=>
+p.probability>max.probability?p:max);
+
+if(bestPrediction.probability>0.90){
+
+markAttendance(bestPrediction.className);
+
+}
+
+}
+
+function markAttendance(name){
+
+let today=new Date().toLocaleDateString();
+
+let attendance=JSON.parse(localStorage.getItem("attendance"))||{};
+
+if(attendance[today]){
+
+document.getElementById("status").innerText=
+"Attendance already recorded today";
+
+return;
+
+}
+
+attendance[today]=name;
+
+localStorage.setItem("attendance",JSON.stringify(attendance));
+
+document.getElementById("status").innerText=
+"Attendance recorded for "+name;
+
+loadHistory();
+
+}
+
+function loadHistory(){
+
+let attendance=JSON.parse(localStorage.getItem("attendance"))||{};
+
+let history=document.getElementById("history");
+
+history.innerHTML="";
+
+for(let date in attendance){
+
+let div=document.createElement("div");
+
+div.innerText=date+" : "+attendance[date];
+
+history.appendChild(div);
+
+}
+
+}
+
+</script>
+
+</body>
+</html>

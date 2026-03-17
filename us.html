@@ -1,144 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title> Detector 💖</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
 <style>
-    * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-        font-family: 'Comic Sans MS', 'Segoe UI', cursive;
-    }
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:'Comic Sans MS', cursive;
+}
 
-    body {
-        background: #fff0f5;
-        min-height: 100vh;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 20px;
-        overflow: hidden;
-    }
+/* 💗 EXACT BACKGROUND */
+body{
+min-height:100vh;
+display:flex;
+align-items:center;
+justify-content:center;
 
-    /* Floating hearts background */
-    body::before {
-        content: "💖 💕 💗 💓 💞 💘";
-        position: absolute;
-        font-size: 40px;
-        animation: float 15s linear infinite;
-        opacity: 0.2;
-    }
+/* 👇 put your image path here */
+background-image: url("heart.jpg");
+background-size: cover;
+background-position: center;
+}
 
-    @keyframes float {
-        0% {
-            transform: translateY(100vh);
-        }
+/* card */
+.container{
+background:rgba(0,0,0,0.75);
+padding:25px;
+border-radius:25px;
+max-width:400px;
+width:100%;
+text-align:center;
+border:2px dashed #ff9ecb;
+box-shadow:0 0 30px rgba(255,105,180,0.5);
+color:white;
+backdrop-filter:blur(8px);
+}
 
-        100% {
-            transform: translateY(-100vh);
-        }
-    }
+h1{
+color:#ff4d88;
+margin-bottom:15px;
+}
 
-    .container {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(10px);
-        border-radius: 25px;
-        padding: 30px;
-        max-width: 450px;
-        width: 100%;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(255, 105, 180, 0.3);
-        border: 2px dashed #ff9ecb;
-        animation: popIn 0.8s ease;
-    }
+/* button */
+button{
+background:#ff4d88;
+color:white;
+border:none;
+padding:12px;
+border-radius:30px;
+cursor:pointer;
+width:100%;
+margin-bottom:15px;
+transition:0.2s;
+}
 
-    @keyframes popIn {
-        from {
-            transform: scale(0.8);
-            opacity: 0;
-        }
+button:disabled{
+background:#ccc;
+cursor:not-allowed;
+}
 
-        to {
-            transform: scale(1);
-            opacity: 1;
-        }
-    }
+/* webcam */
+#webcam-container canvas{
+border-radius:15px;
+border:3px solid #ff9ecb;
+}
 
-    h1 {
-        font-size: 26px;
-        margin-bottom: 20px;
-        color: #ff4d88;
-    }
-
-    /* Cute button */
-    button {
-        background: #ff4d88;
-        color: white;
-        border: none;
-        padding: 12px 25px;
-        font-size: 16px;
-        border-radius: 50px;
-        cursor: pointer;
-        transition: 0.3s;
-        box-shadow: 0 5px 15px rgba(255, 77, 136, 0.4);
-    }
-
-    button:hover {
-        transform: scale(1.1) rotate(-2deg);
-        background: #ff3385;
-    }
-
-    /* Webcam */
-    #webcam-container {
-        margin: 20px auto;
-        display: flex;
-        justify-content: center;
-    }
-
-    #webcam-container canvas {
-        border-radius: 20px;
-        border: 3px solid #ff9ecb;
-        box-shadow: 0 5px 20px rgba(255, 105, 180, 0.4);
-    }
-
-    /* Predictions */
-    #label-container {
-        margin-top: 20px;
-    }
-
-    .prediction {
-        background: #ffe6f0;
-        padding: 10px 15px;
-        border-radius: 20px;
-        margin-bottom: 10px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 3px 10px rgba(255, 105, 180, 0.2);
-        animation: fadeIn 0.5s ease;
-    }
-
-    .prediction::before {
-        content: "💗";
-        margin-right: 8px;
-    }
-
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    /* Responsive */
-    @media(max-width:500px) {
-        h1 {
-            font-size: 20px;
-        }
-
-        button {
-            width: 100%;
-        }
-    }
+/* predictions */
+.prediction{
+background:#2b1a22;
+padding:10px;
+margin-top:10px;
+border-radius:20px;
+display:flex;
+justify-content:space-between;
+}
 </style>
+</head>
+
+<body>
+
+<div class="container">
+<h1>💖 Detector 💖</h1>
+
+<button id="startBtn" onclick="init()">Start Camera</button>
+
+<div id="webcam-container"></div>
+<div id="label-container"></div>
+</div>
+
+<script>
+const URL="./my_model/";
+
+let model, webcam, labelContainer, maxPredictions;
+let started=false;
+
+async function init(){
+
+if(started) return;
+started=true;
+
+document.getElementById("startBtn").disabled=true;
+document.getElementById("startBtn").innerText="Camera Started 💖";
+
+const modelURL=URL+"model.json";
+const metadataURL=URL+"metadata.json";
+
+model=await tmImage.load(modelURL,metadataURL);
+maxPredictions=model.getTotalClasses();
+
+webcam=new tmImage.Webcam(250,250,true);
+
+await webcam.setup();
+await webcam.play();
+
+window.requestAnimationFrame(loop);
+
+document.getElementById("webcam-container").appendChild(webcam.canvas);
+
+labelContainer=document.getElementById("label-container");
+
+for(let i=0;i<maxPredictions;i++){
+let div=document.createElement("div");
+div.className="prediction";
+labelContainer.appendChild(div);
+}
+}
+
+async function loop(){
+webcam.update();
+await predict();
+window.requestAnimationFrame(loop);
+}
+
+async function predict(){
+const prediction=await model.predict(webcam.canvas);
+
+for(let i=0;i<maxPredictions;i++){
+labelContainer.childNodes[i].innerHTML=
+`<span>${prediction[i].className}</span>
+<span>💘 ${(prediction[i].probability*100).toFixed(1)}%</span>`;
+}
+}
+</script>
+
+</body>
+</html>

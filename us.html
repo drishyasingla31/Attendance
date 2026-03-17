@@ -1,184 +1,144 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Teachable Machine Image Model</title>
-
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
 <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: 'Comic Sans MS', 'Segoe UI', cursive;
+    }
 
-*{
-margin:0;
-padding:0;
-box-sizing:border-box;
-font-family: 'Segoe UI', sans-serif;
-}
+    body {
+        background: #fff0f5;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        overflow: hidden;
+    }
 
-body{
-background: linear-gradient(135deg,#667eea,#764ba2);
-min-height:100vh;
-display:flex;
-align-items:center;
-justify-content:center;
-padding:20px;
-color:white;
-}
+    /* Floating hearts background */
+    body::before {
+        content: "💖 💕 💗 💓 💞 💘";
+        position: absolute;
+        font-size: 40px;
+        animation: float 15s linear infinite;
+        opacity: 0.2;
+    }
 
-.container{
-background:rgba(255,255,255,0.1);
-backdrop-filter:blur(12px);
-border-radius:20px;
-padding:30px;
-max-width:450px;
-width:100%;
-text-align:center;
-box-shadow:0 10px 30px rgba(0,0,0,0.3);
-}
+    @keyframes float {
+        0% {
+            transform: translateY(100vh);
+        }
 
-h1{
-font-size:26px;
-margin-bottom:20px;
-}
+        100% {
+            transform: translateY(-100vh);
+        }
+    }
 
-button{
-background:#ffffff;
-color:#333;
-border:none;
-padding:12px 25px;
-font-size:16px;
-border-radius:8px;
-cursor:pointer;
-transition:0.3s;
-margin-bottom:20px;
-}
+    .container {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(10px);
+        border-radius: 25px;
+        padding: 30px;
+        max-width: 450px;
+        width: 100%;
+        text-align: center;
+        box-shadow: 0 10px 30px rgba(255, 105, 180, 0.3);
+        border: 2px dashed #ff9ecb;
+        animation: popIn 0.8s ease;
+    }
 
-button:hover{
-background:#f0f0f0;
-transform:scale(1.05);
-}
+    @keyframes popIn {
+        from {
+            transform: scale(0.8);
+            opacity: 0;
+        }
 
-#webcam-container{
-margin:20px auto;
-display:flex;
-justify-content:center;
-}
+        to {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
 
-#webcam-container canvas{
-border-radius:15px;
-box-shadow:0 5px 20px rgba(0,0,0,0.3);
-}
+    h1 {
+        font-size: 26px;
+        margin-bottom: 20px;
+        color: #ff4d88;
+    }
 
-#label-container{
-margin-top:20px;
-text-align:left;
-}
+    /* Cute button */
+    button {
+        background: #ff4d88;
+        color: white;
+        border: none;
+        padding: 12px 25px;
+        font-size: 16px;
+        border-radius: 50px;
+        cursor: pointer;
+        transition: 0.3s;
+        box-shadow: 0 5px 15px rgba(255, 77, 136, 0.4);
+    }
 
-.prediction{
-background:rgba(255,255,255,0.2);
-padding:10px;
-border-radius:8px;
-margin-bottom:10px;
-display:flex;
-justify-content:space-between;
-}
+    button:hover {
+        transform: scale(1.1) rotate(-2deg);
+        background: #ff3385;
+    }
 
-@media(max-width:500px){
+    /* Webcam */
+    #webcam-container {
+        margin: 20px auto;
+        display: flex;
+        justify-content: center;
+    }
 
-.container{
-padding:20px;
-}
+    #webcam-container canvas {
+        border-radius: 20px;
+        border: 3px solid #ff9ecb;
+        box-shadow: 0 5px 20px rgba(255, 105, 180, 0.4);
+    }
 
-h1{
-font-size:20px;
-}
+    /* Predictions */
+    #label-container {
+        margin-top: 20px;
+    }
 
-button{
-width:100%;
-}
+    .prediction {
+        background: #ffe6f0;
+        padding: 10px 15px;
+        border-radius: 20px;
+        margin-bottom: 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 3px 10px rgba(255, 105, 180, 0.2);
+        animation: fadeIn 0.5s ease;
+    }
 
-}
+    .prediction::before {
+        content: "💗";
+        margin-right: 8px;
+    }
 
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive */
+    @media(max-width:500px) {
+        h1 {
+            font-size: 20px;
+        }
+
+        button {
+            width: 100%;
+        }
+    }
 </style>
-</head>
-
-<body>
-
-<div class="container">
-
-<h1>Teachable Machine Model</h1>
-
-<button onclick="init()">Start Camera</button>
-
-<div id="webcam-container"></div>
-
-<div id="label-container"></div>
-
-</div>
-
-<script>
-
-const URL = "./my_model/";
-
-let model, webcam, labelContainer, maxPredictions;
-
-async function init() {
-
-const modelURL = URL + "model.json";
-const metadataURL = URL + "metadata.json";
-
-model = await tmImage.load(modelURL, metadataURL);
-maxPredictions = model.getTotalClasses();
-
-const flip = true;
-
-webcam = new tmImage.Webcam(250, 250, flip);
-
-await webcam.setup();
-await webcam.play();
-
-window.requestAnimationFrame(loop);
-
-document.getElementById("webcam-container").appendChild(webcam.canvas);
-
-labelContainer = document.getElementById("label-container");
-
-for (let i = 0; i < maxPredictions; i++) {
-
-const div = document.createElement("div");
-div.className="prediction";
-labelContainer.appendChild(div);
-
-}
-
-}
-
-async function loop() {
-
-webcam.update();
-await predict();
-window.requestAnimationFrame(loop);
-
-}
-
-async function predict() {
-
-const prediction = await model.predict(webcam.canvas);
-
-for (let i = 0; i < maxPredictions; i++) {
-
-const classPrediction =
-prediction[i].className + " : " + (prediction[i].probability * 100).toFixed(1) + "%";
-
-labelContainer.childNodes[i].innerHTML = classPrediction;
-
-}
-
-}
-
-</script>
-
-</body>
-</html>
